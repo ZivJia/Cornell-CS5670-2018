@@ -1,6 +1,5 @@
 import sys
 sys.path.append('/Users/kb/bin/opencv-3.1.0/build/lib/')
-
 import cv2
 import numpy as np
 
@@ -23,8 +22,31 @@ def cross_correlation_2d(img, kernel):
         height and the number of color channels)
     '''
     # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
-    # TODO-BLOCK-END
+    def grey_correlation(img,kernel):
+        imgHeight = len(img)
+        imgWidth = len(img[0])
+        kernelHeight = len(kernel)
+        kernelwidth = len(kernel[0])
+        heightIncrease = int((kernelHeight-1)/2)
+        widthIncrease = int((kernelwidth-1)/2)
+        new = np.zeros((imgHeight,imgWidth),dtype = type(img[0,0]))
+        # fullfill the original image
+        img = np.append(np.array([[0 for i in range(imgWidth)] for i in range(heightIncrease)]),img,axis = 0)
+        img = np.append(img,np.array([[0 for i in range(imgWidth)] for i in range(heightIncrease)]),axis = 0)
+        img = np.concatenate((img,np.array([[0 for i in range(widthIncrease)] for i in range((imgHeight+heightIncrease*2))])),axis = 1)
+        img = np.concatenate((np.array([[0 for i in range(widthIncrease)] for i in range((imgHeight+heightIncrease*2))]),img),axis = 1)
+        for i in range(widthIncrease,imgWidth+widthIncrease):
+            for j in range(heightIncrease,imgHeight+heightIncrease):
+                new[j-heightIncrease,i-widthIncrease] = (img[j-heightIncrease:j+heightIncrease+1,
+                	i-widthIncrease:i+widthIncrease+1]*kernel).sum()
+        return new
+    if len(img.shape) == 3:
+        imgr = grey_correlation(img[:,:,0],kernel)
+        imgg = grey_correlation(img[:,:,1],kernel)
+        imgb = grey_correlation(img[:,:,2],kernel)
+        return np.dstack((imgr,imgg,imgb))
+    else:
+        return grey_correlation(img,kernel)
 
 def convolve_2d(img, kernel):
     '''Use cross_correlation_2d() to carry out a 2D convolution.
@@ -40,10 +62,36 @@ def convolve_2d(img, kernel):
         height and the number of color channels)
     '''
     # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
+    def grey_convolve(img,kernel):
+        imgHeight = len(img)
+        imgWidth = len(img[0])
+        kernelHeight = len(kernel)
+        kernelwidth = len(kernel[0])
+        heightIncrease = int((kernelHeight-1)/2)
+        widthIncrease = int((kernelwidth-1)/2)
+        kernel = np.flip(kernel,axis = 0)
+        kernel = np.flip(kernel,axis = 1)
+        new = np.zeros((imgHeight,imgWidth),dtype = type(img[0,0]))
+        # fullfill the original image
+        img = np.append(np.array([[0 for i in range(imgWidth)] for i in range(heightIncrease)]),img,axis = 0)
+        img = np.append(img,np.array([[0 for i in range(imgWidth)] for i in range(heightIncrease)]),axis = 0)
+        img = np.concatenate((img,np.array([[0 for i in range(widthIncrease)] for i in range((imgHeight+heightIncrease*2))])),axis = 1)
+        img = np.concatenate((np.array([[0 for i in range(widthIncrease)] for i in range((imgHeight+heightIncrease*2))]),img),axis = 1)
+        for i in range(widthIncrease,imgWidth+widthIncrease):
+            for j in range(heightIncrease,imgHeight+heightIncrease):
+                new[j-heightIncrease,i-widthIncrease] = (img[j-heightIncrease:j+heightIncrease+1,
+                	i-widthIncrease:i+widthIncrease+1]*kernel).sum()
+        return new
+    if len(img.shape) == 3:
+        imgr = grey_convolve(img[:,:,0],kernel)
+        imgg = grey_convolve(img[:,:,1],kernel)
+        imgb = grey_convolve(img[:,:,2],kernel)
+        return np.dstack((imgr,imgg,imgb))
+    else:
+        return grey_convolve(img,kernel)
     # TODO-BLOCK-END
 
-def gaussian_blur_kernel_2d(sigma, width, height):
+def gaussian_blur_kernel_2d(sigma, height, width):
     '''Return a Gaussian blur kernel of the given dimensions and with the given
     sigma. Note that width and height are different.
 
@@ -59,7 +107,11 @@ def gaussian_blur_kernel_2d(sigma, width, height):
         with an image results in a Gaussian-blurred image.
     '''
     # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
+    gaussian = np.zeros((height,width),dtype = np.float64)
+    for i in range(-(width-1)/2,(width-1)/2+1):
+        for j in range(-(height-1)/2,(height-1)/2+1):
+            gaussian[j+(height-1)/2,i+(width-1)/2] = 1/(2*np.pi*sigma**2)*np.exp(-(i**2+j**2)/np.float64((2*sigma**2)))
+    return gaussian/gaussian.sum()
     # TODO-BLOCK-END
 
 def low_pass(img, sigma, size):
@@ -72,7 +124,8 @@ def low_pass(img, sigma, size):
         height and the number of color channels)
     '''
     # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
+    kernel = gaussian_blur_kernel_2d(sigma,size,size)
+    return convolve_2d(img,kernel)
     # TODO-BLOCK-END
 
 def high_pass(img, sigma, size):
@@ -85,7 +138,8 @@ def high_pass(img, sigma, size):
         height and the number of color channels)
     '''
     # TODO-BLOCK-BEGIN
-    raise Exception("TODO in hybrid.py not implemented")
+    detail = img - low_pass(img,sigma,size)
+    return detail
     # TODO-BLOCK-END
 
 def create_hybrid_image(img1, img2, sigma1, size1, high_low1, sigma2, size2,
