@@ -32,7 +32,27 @@ def compute_photometric_stereo_impl(lights, images):
         normals -- float32 height x width x 3 image with dimensions matching
                    the input images.
     """
-    raise NotImplementedError()
+    height , width, channels = images[0].shape
+    albedo = np.zeros((height,width,channels), dtype = np.float32)
+    normals = np.zeros((height,width,3),dtype = np.float32)
+    for i in range(height):
+        for j in range(width):
+            p_normals = np.zeros((channels,3), dtype = np.float32)
+            for k in range(channels):
+                I = np.array([image[i,j,k] for image in images])
+                I = I.reshape(-1,1)
+                L = lights.T
+                G = np.dot(np.linalg.inv(np.dot(L.T,L)),np.dot(L.T,I))
+                albedo[i,j,k] = np.sqrt((G**2).sum())
+                if(albedo[i,j,k] < 1e-7):
+                    albedo[i,j,k] = 0
+                    p_normals[k] = np.zeros(3)
+                else:
+                    p_normals[k]=(G / albedo[i,j,k]).flatten()
+            normals[i,j]=p_normals.sum(0)/channels
+    return albedo,normals
+    
+   # raise NotImplementedError()
 
 
 
@@ -47,7 +67,18 @@ def project_impl(K, Rt, points):
     Output:
         projections -- height x width x 2 array of 2D projections
     """
-    raise NotImplementedError()
+    height, width = points.shape[0:2]
+    projection = np.zeros((height,width,2))
+    KRt = K.dot(Rt)
+    for i in range(height):
+        for j in range(width):
+            p = np.append(points[i,j] ,1)
+            _p = KRt.dot(p)
+            _p = _p / _p[2]
+            projection[i,j] = [_p[0], _p[1]]
+    return projection
+            
+#    raise NotImplementedError()
 
 
 
@@ -100,7 +131,26 @@ def preprocess_ncc_impl(image, ncc_size):
     Output:
         normalized -- heigth x width x (channels * ncc_size**2) array
     """
-    raise NotImplementedError()
+    height, width, channels = image.shape
+    normalized = np.zeros((height,width,channels*ncc_size**2), dtype = np.float32)
+    for i in range(height):
+        for j in range(width):
+            if i - ncc_size/2 <0 or i + ncc_size/2 >= height or j - ncc_size/2 <0 or j + ncc_size/2 >= width:
+                continue
+            vec=np.array([])
+            for k in range(channels):
+                patch = image[i-ncc_size/2:i+ncc_size/2+1,j-ncc_size/2:j+ncc_size/2+1,k].flatten()
+                patch = patch - patch.mean()
+                vec = np.append(vec,patch)
+            vec_norm = np.sqrt((vec**2).sum())
+            if (vec_norm<1e-6):
+                normalized[i,j,:]=np.zeros(channels*ncc_size**2)
+            else:
+                normalized[i,j]= vec / vec_norm
+    return normalized
+                
+    
+   #raise NotImplementedError()
 
 
 def compute_ncc_impl(image1, image2):
@@ -115,7 +165,15 @@ def compute_ncc_impl(image1, image2):
         ncc -- height x width normalized cross correlation between image1 and
                image2.
     """
-    raise NotImplementedError()
+    height, width = image1.shape[0:2]
+    ncc = np.zeros((height,width))
+    for i in range(height):
+        for j in range(width):
+            ncc[i,j] = sum(image1[i,j,:]*image2[i,j,:])
+    return ncc
+            
+            
+    #raise NotImplementedError()
 
 
 def form_poisson_equation_impl(height, width, alpha, normals, depth_weight, depth):
