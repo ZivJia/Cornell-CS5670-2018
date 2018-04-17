@@ -69,8 +69,8 @@ def convolve_2d(img, kernel):
         kernelwidth = len(kernel[0])
         heightIncrease = int((kernelHeight-1)/2)
         widthIncrease = int((kernelwidth-1)/2)
-        kernel = np.flip(kernel,axis = 0)
-        kernel = np.flip(kernel,axis = 1)
+        kernel = np.fliplr(kernel)
+        kernel = np.flipud(kernel)
         new = np.zeros((imgHeight,imgWidth),dtype = type(img[0,0]))
         # fullfill the original image
         img = np.append(np.array([[0 for i in range(imgWidth)] for i in range(heightIncrease)]),img,axis = 0)
@@ -103,7 +103,7 @@ def gaussian_blur_kernel_2d(sigma, height, width):
         height: The height of the kernel.
 
     Output:
-        Return a kernel of dimensions height x width such that convolving it
+        Return a kernel of dimensions width x height such that convolving it
         with an image results in a Gaussian-blurred image.
     '''
     # TODO-BLOCK-BEGIN
